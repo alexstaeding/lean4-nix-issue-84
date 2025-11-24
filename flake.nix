@@ -1,0 +1,58 @@
+{
+  description = "Lean 4 Example Project";
+
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    lean4-nix.url = "github:lenianiva/lean4-nix";
+  };
+
+  outputs =
+    inputs@{
+      nixpkgs,
+      flake-parts,
+      lean4-nix,
+      ...
+    }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      systems = [
+        "aarch64-darwin"
+        "aarch64-linux"
+        "x86_64-darwin"
+        "x86_64-linux"
+      ];
+
+      perSystem =
+        {
+          system,
+          pkgs,
+          ...
+        }:
+        {
+          _module.args.pkgs = import nixpkgs {
+            inherit system;
+            overlays = [
+              # (lean4-nix.readToolchainFile {
+              #   toolchain = ./lean-toolchain;
+              #   binary = system != "aarch64-darwin";
+              # })
+              (lean4-nix.readToolchain {
+                toolchain = "leanprover/lean4:v4.24.0";
+                binary = system != "aarch64-darwin";
+              })
+            ];
+          };
+
+          packages.default =
+            ((lean4-nix.lake { inherit pkgs; }).mkPackage {
+              src = ./.;
+            }).executable;
+
+          packages.lean = pkgs.lean;
+
+          devShells.default = pkgs.mkShell {
+            packages = with pkgs.lean; [ lean-all ];
+          };
+        };
+    };
+}
