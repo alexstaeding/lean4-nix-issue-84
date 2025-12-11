@@ -43,6 +43,7 @@
           };
 
           packages.default = lake2nix.mkPackage {
+            name = "example-project";
             src = ./.;
           };
 
